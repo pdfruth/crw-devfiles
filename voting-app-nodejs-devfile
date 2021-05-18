@@ -1,0 +1,79 @@
+apiVersion: 1.0.0
+metadata:
+  name: nodejs-cc7x6
+projects:
+  - name: nodejs-web-app
+    source:
+      location: 'https://devfile-registry-openshift-workspaces.apps.ocp1.ocp.local/resources/nodejs-nodejs-web-app-master.zip'
+      type: zip
+  - name: app
+    source:
+      location: 'https://github.com/pdfruth/voting-app-nodejs.git'
+      type: git
+      branch: master
+    clonePath: nodejs-web-app/app
+components:
+  - id: che-incubator/typescript/latest
+    memoryLimit: 512Mi
+    type: chePlugin
+  - id: ms-vscode/node-debug2/latest
+    type: chePlugin
+  - mountSources: true
+    endpoints:
+      - name: nodejs
+        port: 8080
+    memoryLimit: 512Mi
+    type: dockerimage
+    alias: nodejs
+    image: 'registry.redhat.io/codeready-workspaces/plugin-java8-openj9-rhel8@sha256:e60e1bfaab6686598528ab2426085c1fa8d56448fa057b420d148da952e09d16'
+    env:
+      - value: 'postgres://admin:admin@new-postgresql.pdf-voting-app-demo.svc.cluster.local:5432/db'
+        name: POSTGRES_CONNECT_STRING
+commands:
+  - name: 1. Run the web app (and download dependencies)
+    actions:
+      - workdir: '${CHE_PROJECTS_ROOT}/nodejs-web-app/app'
+        type: exec
+        command: npm install; nodemon server.js
+        component: nodejs
+  - name: 2. Download dependencies
+    actions:
+      - workdir: '${CHE_PROJECTS_ROOT}/nodejs-web-app/app'
+        type: exec
+        command: npm install
+        component: nodejs
+  - name: 3. Run the web app
+    actions:
+      - workdir: '${CHE_PROJECTS_ROOT}/nodejs-web-app/app'
+        type: exec
+        command: nodemon server.js
+        component: nodejs
+  - name: 4. Run the web app (debugging enabled)
+    actions:
+      - workdir: '${CHE_PROJECTS_ROOT}/nodejs-web-app/app'
+        type: exec
+        command: nodemon --inspect server.js
+        component: nodejs
+  - name: 5. Stop the web app
+    actions:
+      - type: exec
+        command: 'node_server_pids=$(pgrep -fx ''.*nodemon (--inspect )?server.js'' | tr "\\n" " ") && echo "Stopping node server with PIDs: ${node_server_pids}" &&  kill -15 ${node_server_pids} &>/dev/null && echo ''Done.'''
+        component: nodejs
+  - name: Attach remote debugger
+    actions:
+      - referenceContent: |
+          {
+            "version": "0.2.0",
+            "configurations": [
+              {
+                "type": "node",
+                "request": "attach",
+                "name": "Attach to Remote",
+                "address": "localhost",
+                "port": 9229,
+                "localRoot": "${workspaceFolder}",
+                "remoteRoot": "${workspaceFolder}"
+              }
+            ]
+          }
+        type: vscode-launch
