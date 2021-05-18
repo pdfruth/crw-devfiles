@@ -1,11 +1,7 @@
 apiVersion: 1.0.0
 metadata:
-  name: nodejs-cc7x6
+  name: nodejs-example
 projects:
-  - name: nodejs-web-app
-    source:
-      location: 'https://devfile-registry-openshift-workspaces.apps.ocp1.ocp.local/resources/nodejs-nodejs-web-app-master.zip'
-      type: zip
   - name: app
     source:
       location: 'https://github.com/pdfruth/voting-app-nodejs.git'
